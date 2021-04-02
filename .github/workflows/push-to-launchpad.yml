@@ -1,0 +1,66 @@
+# This is only a template workflow. That means that you need to replace
+# every placeholder with your appropriate values. You may also need to
+# put extra build dependencies as in "Install packages" step. You can
+# adjust it according to your needs.
+name: Push to PPA Test
+
+on:
+  # Currently, this workflow can be run manually. You can adjust it so
+  # it runs on each release.
+  workflow_dispatch:
+
+jobs:
+  build:
+    # It has to run on Ubuntu to ensure that we've pushed it to the PPA
+    # and that it builds source package on it.
+    runs-on: ubuntu-latest
+
+    steps:
+      # Of course, we need to check this out. Without it, it won't work!
+      - uses: actions/checkout@v2
+      
+      # Launchpad won't acceot unsigned packages, so you have to place
+      # your GPG private key and passphrase, if appropriate. Add such
+      # things to your Secrets.
+      - name: Import GPG
+        uses: crazy-max/ghaction-import-gpg@v3.1.0
+        with:
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+
+      # You can adjust this to your neede like adding extra build
+      # dependencies. Make sure that at least these three packages,
+      # devscripts, debhelper-compat, and dput, get installed.
+      - name: Install packages
+        run: sudo apt install devscripts debhelper-compat dput
+        
+      # If there is a script that can initialize the source package
+      # so it can be built offline (sbuild), add it.
+      #- name: Run initialization script
+      #  run: |
+      #    chmod +x initialize.sh
+      #    ./initialize.sh
+      
+      # This makes a package that contains full source code, including
+      # pre-downloaded stuff by the initialization script. Replace
+      # foobar with the package name and x,x with the package version,
+      # not including the after version part (e.g, 0ppa1). Adjust xz's
+      # compression level if your package is big.
+      - name: Make original package
+        run: |
+          tar cfv ../foobar_x.x.orig.tar .
+          xz -9 ../foobar_x.x.orig.tar
+      
+      # This builds a source package. This is required. Don't worry;
+      # everything is logged.
+      - name: Build source package
+        run: debuild -S -sa
+        
+      # The last thing we need to do is to push the package to Launchpad.
+      # Replace john with your Launchpad username, foobar with your
+      # package name, and the x.x with the full version (including e.g.
+      # 0ppa1). If you don't know how it was named, or if you want to
+      # be dynamic, use wildcards, but be sure that you put it before
+      # ".changes" (e,g, foobar_*_source.changes)
+      - name: Push to Launchpad
+        run: dput ppa:john/foobar ../foobar_x.x_source.changes
