@@ -2,7 +2,7 @@
 # every placeholder with your appropriate values. You may also need to
 # put extra build dependencies as in "Install packages" step. You can
 # adjust it according to your needs.
-name: Push to PPA Test
+name: Push to PPA Test (Amend with original source)
 
 on:
   # Currently, this workflow can be run manually. You can adjust it so
@@ -42,39 +42,32 @@ jobs:
       # so it can be built offline (sbuild), add it. Note that it's
       # only required for software that requires downloading and
       # installing library dependencies (msbuild for example).
-      #- name: Run initialization script
+      # First, it downloads the original source file so that the
+      # tar program can extract the source code into its appropriate
+      # directory. Then, it runs the initializeamend script to
+      # download needed dependencies.
+      #- name: Download original source
       #  run: |
-      #    chmod +x initialize.sh
-      #    ./initialize.sh
-      
-      # This makes a package that contains full source code, including
-      # pre-downloaded stuff by the initialization script. Replace
-      # foobar with the package name and x,x with the package version,
-      # not including the after version part (e.g, 0ppa1). Adjust xz's
-      # compression level if your package is big. Additionally, we need
-      # to move both the "debian" and ".github" folder to the parent
-      # directory so that the original package archive remains
-      # consistent. We only need to restore the "debian" folder back
-      # to its original place, but we don't move the ".github" folder
-      # as "debuild" will report that there are unexpected upstream
-      # changes.
-      - name: Make original package
-        run: |
-          mv debian ..
-          mv .github ..
-          tar cfv ../foobar_x.x.orig.tar .
-          xz -9 ../foobar_x.x.orig.tar
-          mv ../debian .
+      #    wget --output-document=../foobar_x.x.orig.tar.xz https://launchpad.net/~john/+archive/ubuntu/msbuild/+sourcefiles/msbuild/x.x/foobar_x.x.orig.tar.xz
+      #    tar xf ../foobar_x.x.orig.tar.xz ./foobar
+      #    mv .github ..
+      #    ./initializeamend.sh
+          
+      # If the original source doesn't contain the initializeamend
+      # script, this will be run to avoid "unexpected upstream
+      # changes" errors.
+      #- name: Remove in next major version
+      #  run: rm initializeamend.sh
       
       # This builds a source package. This is required. Don't worry;
       # everything is logged.
       - name: Build source package
-        run: debuild -S -sa
+        run: debuild -S
         
       # The last thing we need to do is to push the package to Launchpad.
       # Replace john with your Launchpad username, foobar with your
       # package name, and the x.x with the full version (including e.g.
-      # 0ppa1). If you don't know how it was named, or if you want to
+      # 0ppa2). If you don't know how it was named, or if you want to
       # be dynamic, use wildcards, but be sure that you put it before
       # ".changes" (e,g, foobar_*_source.changes)
       - name: Push to Launchpad
